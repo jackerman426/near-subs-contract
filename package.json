@@ -1,0 +1,22 @@
+{
+  "name": "near-subs-contract",
+  "version": "1.0.0",
+  "license": "(MIT AND Apache-2.0)",
+  "type": "module",
+  "scripts": {
+    "format": "prettier --write \"src/**/*.ts\" \"sandbox-ts/**/*.ts\"",
+    "build": "near-sdk-js build src/contract.ts build/near_subs_contract.wasm",
+    "test": "$npm_execpath run build && cd sandbox-ts && $npm_execpath run test -- -- ../build/near_subs_contract.wasm",
+    "postinstall": "cd sandbox-ts && $npm_execpath install"
+  },
+  "dependencies": {
+    "near-cli": "4.0.11",
+    "near-sdk-js": "1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "prettier": "^3.2.5",
+    "ts-morph": "^20.0.0",
+    "typescript": "^5.4.2"
+  }
+}
