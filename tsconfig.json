@@ -6,6 +6,8 @@
     "experimentalDecorators": true,
     "target": "es5",
     "noEmit": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": true,
     "esModuleInterop": true
   },
   "exclude": [

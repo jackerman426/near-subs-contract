@@ -38,7 +38,7 @@ Ensure you have NEAR CLI installed and are logged into your NEAR account.
   npm run build
   ```
 Deploy the contract to the testnet or mainnet (not a good idea yet!):
-```bash
+  ```bash
   near deploy --accountId your-account.testnet --wasmFile out/NearSubs.wasm
   ```
 
@@ -52,6 +52,16 @@ Create a subscription plan:
 Retrieve subscription plans:
   ```
   near view your-account.testnet getPlans '{"accountId": "your-account.testnet"}'
+  ```
+
+Subscribe to a plan:
+  ```
+  near call your-account.testnet subscribeToPlan '{"planId": {planId}, "endDate": 1742646550}'
+  ```
+
+Retrieve subscriptions:
+  ```
+  near view your-account.testnet getSubscriptions '{"accountId": "your-account.testnet"}'
   ```
 
 <br />
