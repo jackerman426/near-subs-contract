@@ -57,28 +57,21 @@ class NearSubsContract {
   @view({})
   getPlans({ accountId }: { accountId: string }): Plan[] {
     const userPlanIds = this.userPlans.get(accountId, { defaultValue: [] })
-    return userPlanIds.map((planId) =>
-      JSON.parse(this.plans.get(planId, { defaultValue: "{}" })),
-    )
+    return userPlanIds.map((planId) => this.getPlanById(planId))
   }
 
   @call({ payableFunction: false, privateFunction: false })
   subscribeToPlan({ planId, endDate }: { planId: string; endDate: bigint }) {
-    const plan = this.plans.get(planId)
+    const plan = this.getPlanById(planId)
     assert(plan !== null, "Plan does not exist")
 
     const accountId = near.signerAccountId()
 
-    const userSubscriptionsIds = this.userSubscriptions.get(accountId, {
-      defaultValue: [],
-    })
-    near.log(`userSubscriptions: ${userSubscriptionsIds}`)
-    userSubscriptionsIds.forEach((subscriptionId) => {
-      const subscription = JSON.parse(
-        this.subscriptions.get(subscriptionId, { defaultValue: "{}" }),
-      )
-      assert(subscription.planId !== planId, "Already subscribed to this plan")
-    })
+    // Validate and fetch subscription IDs in one step
+    const userSubscriptionsIds = this.validateNotAlreadySubscribed(
+      accountId,
+      planId,
+    )
 
     const subscription = new Subscription(
       planId,
@@ -104,9 +97,31 @@ class NearSubsContract {
       defaultValue: [],
     })
     return userSubscriptionIds.map((subscriptionId) =>
-      JSON.parse(
-        this.subscriptions.get(subscriptionId, { defaultValue: "{}" }),
-      ),
+      this.getSubscriptionById(subscriptionId),
     )
+  }
+
+  //TODO: Move these function to services
+  getPlanById(planId: string): Plan | null {
+    const planJson = this.plans.get(planId, { defaultValue: "{}" })
+    return planJson ? JSON.parse(planJson) : null
+  }
+
+  getSubscriptionById(subscriptionId: string): Subscription | null {
+    const subscriptionJson = this.subscriptions.get(subscriptionId, {
+      defaultValue: "{}",
+    })
+    return subscriptionJson ? JSON.parse(subscriptionJson) : null
+  }
+
+  validateNotAlreadySubscribed(accountId: string, planId: string) {
+    const userSubscriptionsIds = this.userSubscriptions.get(accountId, {
+      defaultValue: [],
+    })
+    userSubscriptionsIds.forEach((subscriptionId) => {
+      const subscription = this.getSubscriptionById(subscriptionId)
+      assert(subscription.planId !== planId, "Already subscribed to this plan")
+    })
+    return userSubscriptionsIds
   }
 }
