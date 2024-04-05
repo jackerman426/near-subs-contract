@@ -2,7 +2,15 @@
 import { near } from "near-sdk-js"
 import { Prefix } from "../types/prefix"
 
-export function generateUniqueId(accountId: string, prefix: Prefix) {
-  const title = accountId.substring(0, accountId.lastIndexOf("."))
-  return `${prefix}-${title}-${near.blockIndex().toString()}`
+export function generateUniqueSubAccountNearId(
+  currentAccountId: string,
+  predecessorAccountId: string,
+  blockIndex: string,
+  prefix: Prefix,
+) {
+  const title = predecessorAccountId.substring(
+    0,
+    predecessorAccountId.indexOf("."),
+  )
+  return `${prefix}-${title}-${blockIndex}.${currentAccountId}`
 }

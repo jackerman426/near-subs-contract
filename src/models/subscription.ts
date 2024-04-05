@@ -1,5 +1,5 @@
 import { Status } from "../types/status"
-import { generateUniqueId } from "../utils/generator"
+import { generateUniqueNearId } from "../utils/generator"
 import { near } from "near-sdk-js"
 import { Prefix } from "../types/prefix"
 
@@ -20,7 +20,7 @@ export class Subscription {
     this.startDate = near.blockTimestamp().toString()
     this.endDate = endDate.toString()
     this.status = status
-    this.id = generateUniqueId(accountId, Prefix.Subscription)
+    this.id = generateUniqueNearId(accountId, Prefix.Subscription)
     this.paymentHistory = []
   }
 
