@@ -1,8 +1,13 @@
-import { Worker, NearAccount, BN, NEAR } from "near-workspaces"
+import { Worker, NearAccount, NEAR } from "near-workspaces"
 import anyTest, { TestFn } from "ava"
 import { utils } from "near-api-js"
-import { Plan } from "../../src/models/plan"
-import { Subscription } from "../../src/models/subscription"
+
+interface JsonToken {
+  ownerId: string
+  tokenId: string
+}
+
+const TEST_NFT_NAME = "Jack nft purchase"
 
 const test = anyTest as TestFn<{
   worker: Worker
@@ -16,10 +21,6 @@ test.beforeEach(async (t) => {
   // Deploy contract
   const root = worker.rootAccount
 
-  // const factory = await root.createSubAccount("factory", {
-  //   initialBalance: utils.format.parseNearAmount("500"),
-  // })
-
   const availableBalance = await root.availableBalance()
   const availableBalanceHuman = availableBalance.toHuman()
 
@@ -30,8 +31,6 @@ test.beforeEach(async (t) => {
     initialBalance: NEAR.parse("10_000_000 N"),
   })
 
-  // await factory.call(factory, "init", {})
-
   const alice = await root.createSubAccount("alice", {
     initialBalance: utils.format.parseNearAmount("100"),
   })
@@ -40,32 +39,9 @@ test.beforeEach(async (t) => {
     initialBalance: utils.format.parseNearAmount("100"),
   })
 
-  // await root.call(factory, "create_plan", {
-  //   name: "Test Monthly Plan",
-  //   frequency: 3,
-  //   amount: 1,
-  // })
-  //
-  // await root.call(contract, "create_plan", {
-  //   name: "Test Weekly Plan",
-  //   frequency: 2,
-  //   amount: 2,
-  // })
-
-  // Save state for test runs, it is unique for each test
-  t.context.worker = worker
-  t.context.accounts = { root, factory, alice, bob }
-})
-
-test.afterEach.always(async (t) => {
-  // Stop Sandbox server
-  await t.context.worker.tearDown().catch((error) => {
-    console.log("Failed to stop the Sandbox:", error)
+  const jack = await root.createSubAccount("jack", {
+    initialBalance: utils.format.parseNearAmount("100"),
   })
-})
-
-test("creates a new plan", async (t) => {
-  const { alice, factory, bob } = t.context.accounts
 
   await alice.call(
     factory,
@@ -80,10 +56,20 @@ test("creates a new plan", async (t) => {
     },
   )
 
-  const alicePlans = await factory.view("view_plans", {
-    accountId: alice.accountId,
+  // Save state for test runs, it is unique for each test
+  t.context.worker = worker
+  t.context.accounts = { root, factory, alice, bob, jack }
+})
+
+test.afterEach.always(async (t) => {
+  // Stop Sandbox server
+  await t.context.worker.tearDown().catch((error) => {
+    console.log("Failed to stop the Sandbox:", error)
   })
-  t.is(alicePlans[0].amount, 1)
+})
+
+test("creates a new plan", async (t) => {
+  const { factory, bob } = t.context.accounts
 
   await bob.call(
     factory,
@@ -102,6 +88,67 @@ test("creates a new plan", async (t) => {
     accountId: bob.accountId,
   })
   t.is(bobPlans[0].amount, 3)
+})
+
+test("purchase nft - subscribe to a plan", async (t) => {
+  const { alice, factory, bob, jack } = t.context.accounts
+
+  const alicePlans = await factory.view("view_plans", {
+    accountId: alice.accountId,
+  })
+
+  const planId = factory.getAccount(alicePlans[0].id)
+
+  await jack.call(
+    planId,
+    "nft_mint",
+    {
+      name: TEST_NFT_NAME,
+    },
+    {
+      gas: "100" + "0".repeat(12), //100 Tgas
+      attachedDeposit: "700" + "0".repeat(19),
+    },
+  )
+
+  await jack.call(
+    planId,
+    "nft_mint",
+    {
+      name: TEST_NFT_NAME,
+    },
+    {
+      gas: "100" + "0".repeat(12), //100 Tgas
+      attachedDeposit: "700" + "0".repeat(19),
+    },
+  )
+
+  const nftTokens = (await planId.view("nft_tokens_for_owner", {
+    accountId: jack.accountId,
+    fromIndex: 0,
+    limit: 10,
+  })) as JsonToken[]
+
+  t.is(nftTokens.length, 2)
+  t.is(nftTokens[0].ownerId, jack.accountId)
+
+  const token = await planId.view("nft_token", {
+    tokenId: nftTokens[0].tokenId,
+  })
+
+  await bob.call(
+    planId,
+    "nft_mint",
+    {
+      name: "Bob first nft purchase",
+    },
+    {
+      gas: "100" + "0".repeat(12), //100 Tgas
+      attachedDeposit: "700" + "0".repeat(19),
+    },
+  )
+
+  // const tokens = await fa
 })
 
 // test("creates a new plan and get plans", async (t) => {
