@@ -1,5 +1,5 @@
 //Query for all the tokens for an owner
-import { PlanContract } from "./index"
+import { VaultContract } from "./index"
 import { JsonToken } from "./metadata"
 import { restoreOwners } from "./internal"
 import { internalNftToken } from "./nft_core"
@@ -10,7 +10,7 @@ export function internalTokensForOwner({
   fromIndex,
   limit,
 }: {
-  contract: PlanContract
+  contract: VaultContract
   accountId: string
   fromIndex?: number
   limit?: number

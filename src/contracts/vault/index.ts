@@ -15,7 +15,7 @@ import { internalNftToken } from "./nft_core"
 import { internalTokensForOwner } from "./enumeration"
 import {
   REQUIRED_GAS_FOR_MINT,
-  REQUIRED_GAS_FOR_NEW_PLAN,
+  REQUIRED_GAS_FOR_NEW_VAULT,
 } from "../../constants"
 
 /// This spec can be treated like a version of the standard.
@@ -25,7 +25,7 @@ export const NFT_METADATA_SPEC = "nft-1.0.0"
 export const NFT_STANDARD_NAME = "nep171"
 
 @NearBindgen({ requireInit: true })
-export class PlanContract {
+export class VaultContract {
   ownerId: string = ""
   tokenIdCounter: number = 0
   tokensPerOwner: LookupMap<any>
@@ -47,7 +47,7 @@ export class PlanContract {
     this.createdAt = near.blockTimestamp().toString()
   }
   default() {
-    return new PlanContract()
+    return new VaultContract()
   }
 
   @initialize({ privateFunction: true }) //this ensures that the method in only callable by the contract's account

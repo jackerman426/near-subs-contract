@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { PlanContract } from "./index"
+import { VaultContract } from "./index"
 import { JsonToken, Token, TokenMetadata } from "./metadata"
 
 const GAS_FOR_RESOLVE_TRANSFER = 40_000_000_000_000
@@ -10,7 +10,7 @@ export function internalNftToken({
   contract,
   tokenId,
 }: {
-  contract: PlanContract
+  contract: VaultContract
   tokenId: string
 }) {
   let token = contract.tokensById.get(tokenId) as Token
@@ -39,7 +39,7 @@ export function internalNftTransfer({
   approvalId,
   memo,
 }: {
-  contract: PlanContract
+  contract: VaultContract
   receiverId: string
   tokenId: string
   approvalId: number
@@ -59,7 +59,7 @@ export function internalNftTransferCall({
   memo,
   msg,
 }: {
-  contract: PlanContract
+  contract: VaultContract
   receiverId: string
   tokenId: string
   approvalId: number
@@ -82,7 +82,7 @@ export function internalResolveTransfer({
   approvedAccountIds,
   memo,
 }: {
-  contract: PlanContract
+  contract: VaultContract
   authorizedId: string
   ownerId: string
   receiverId: string

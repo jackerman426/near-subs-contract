@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { PlanContract } from "."
+import { VaultContract } from "."
 import { Frequency } from "../../types/frequency"
 
 //defines the payout type we'll be returning as a part of the royalty standards.
@@ -147,7 +147,7 @@ export class JsonToken {
 export function internalNftMetadata({
   contract,
 }: {
-  contract: PlanContract
+  contract: VaultContract
 }): NFTMetadata {
   return contract.metadata
 }

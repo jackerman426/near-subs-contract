@@ -13,17 +13,18 @@ import { isValidFrequency } from "../../types/frequency"
 import { generateUniqueSubAccountNearId } from "../../utils/generator"
 import { Prefix } from "../../types/prefix"
 import {
-  GAS_FOR_NEW_PLAN,
-  INITIAL_BALANCE_FOR_NEW_PLAN,
-  REQUIRED_GAS_FOR_NEW_PLAN,
+  GAS_FOR_NEW_VAULT,
+  INITIAL_BALANCE_FOR_NEW_VAULT,
+  REQUIRED_GAS_FOR_NEW_VAULT,
 } from "../../constants"
-import { NFTMetadata } from "../plan/metadata"
+import { NFTMetadata } from "../vault/metadata"
 import { createSubAccountAndDeployContract } from "./factory_core"
+import { refundDeposit } from "../helpers"
 
 @NearBindgen({ requireInit: true })
 export class FactoryContract {
   initialized = false
-  plans: UnorderedMap<string[]>
+  vaults: UnorderedMap<string[]> = new UnorderedMap<string[]>("vaults")
 
   @initialize({ privateFunction: true })
   init() {
@@ -31,23 +32,23 @@ export class FactoryContract {
     this.initialized = true
   }
 
-  constructor() {
-    this.plans = new UnorderedMap("plans")
-    // this.escrowBalances = new UnorderedMap<u128>("escrowBalances")
-  }
+  @call({ payableFunction: true, privateFunction: false })
+  create_vault(metadata: NFTMetadata) {
+    let initialStorageUsage = near.storageUsage()
+    near.log(`initialStorage: ${initialStorageUsage}`)
 
-  @call({ payableFunction: false, privateFunction: false })
-  create_plan(metadata: NFTMetadata) {
-    near.log(`initialized: ${this.initialized}`)
     assert(
-      near.prepaidGas() >= REQUIRED_GAS_FOR_NEW_PLAN,
+      near.prepaidGas() >= REQUIRED_GAS_FOR_NEW_VAULT,
       "Please attach at least 100TGas",
+    )
+    assert(
+      near.attachedDeposit() >= INITIAL_BALANCE_FOR_NEW_VAULT,
+      "Please attach at least 6N to cover the costs for a new vault",
     )
     assert(metadata.name.length > 0, "Name cannot be empty")
     assert(metadata.amount > 0, "Must attach a positive amount")
     assert(isValidFrequency(metadata.frequency), "Invalid frequency value")
 
-    near.log(`Attached deposit: ${near.attachedDeposit()}`)
     near.log(`Account balance: ${near.accountBalance()}`)
     near.log(`Prepaid gas: ${near.prepaidGas()}`)
 
@@ -57,7 +58,7 @@ export class FactoryContract {
       near.currentAccountId(),
       predecessorAccountId,
       near.blockIndex().toString(),
-      Prefix.Plan,
+      Prefix.Vault,
     )
     validateAccountId(subAccountId)
 
@@ -66,27 +67,44 @@ export class FactoryContract {
     )
     const promise = createSubAccountAndDeployContract(
       subAccountId,
-      BigInt(INITIAL_BALANCE_FOR_NEW_PLAN),
+      BigInt(INITIAL_BALANCE_FOR_NEW_VAULT), //This is paid by the smart contract account balance
       includeBytes(
-        "../../../build/plan_contract.wasm",
+        "../../../build/vault_contract.wasm",
       ) as unknown as Uint8Array,
       JSON.stringify({ ownerId: subAccountId, metadata }),
       0,
-      GAS_FOR_NEW_PLAN,
+      GAS_FOR_NEW_VAULT,
     )
 
-    const plans = this.plans.get(predecessorAccountId, { defaultValue: [] })
+    const vaults = this.vaults.get(predecessorAccountId, { defaultValue: [] })
 
-    const newNFTPlanMetaData = new NFTMetadata(metadata)
-    plans.push(JSON.stringify({ ...newNFTPlanMetaData, id: subAccountId }))
-    this.plans.set(predecessorAccountId, plans)
+    const newNFTVaultMetaData = new NFTMetadata(metadata)
+    vaults.push(JSON.stringify({ ...newNFTVaultMetaData, id: subAccountId }))
+    this.vaults.set(predecessorAccountId, vaults)
+
+    let requiredStorageInBytes =
+      near.storageUsage().valueOf() - initialStorageUsage.valueOf()
+
+    //refund any excess storage if the user attached too much. Panic if they didn't attach enough to cover the required.
+    refundDeposit(requiredStorageInBytes, BigInt(INITIAL_BALANCE_FOR_NEW_VAULT))
 
     return near.promiseReturn(promise)
   }
 
   @view({})
-  view_plans({ accountId }: { accountId: string }) {
-    const plans = this.plans.get(accountId, { defaultValue: [] })
-    return plans.map((plan) => JSON.parse(plan))
+  view_vaults_by_account_id({ accountId }: { accountId: string }) {
+    const vaults = this.vaults.get(accountId, { defaultValue: [] })
+    return vaults.map((vault) => JSON.parse(vault))
+  }
+
+  @view({})
+  view_vaults() {
+    const vaults = this.vaults.toArray({ defaultValue: [] })
+    return vaults.flatMap(([accountId, vaults]) =>
+      vaults.map((vault) => ({
+        accountId,
+        ...JSON.parse(vault),
+      })),
+    )
   }
 }

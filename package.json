@@ -6,7 +6,7 @@
   "scripts": {
     "format": "prettier --write \"src/**/*.ts\" \"sandbox-ts/**/*.ts\"",
     "build": "run-s build:*",
-    "build:plan": "near-sdk-js build src/contracts/plan/index.ts build/plan_contract.wasm",
+    "build:vault": "near-sdk-js build src/contracts/vault/index.ts build/vault_contract.wasm",
     "build:factory": "near-sdk-js build src/contracts/factory/index.ts build/factory_contract.wasm",
     "test": "$npm_execpath run build && cd sandbox-ts && $npm_execpath run test -- -- ../build/factory_contract.wasm",
     "testWithoutBuild": "cd sandbox-ts && $npm_execpath run test -- -- ../build/factory_contract.wasm",

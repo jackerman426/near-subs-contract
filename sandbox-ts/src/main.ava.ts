@@ -21,14 +21,12 @@ test.beforeEach(async (t) => {
   // Deploy contract
   const root = worker.rootAccount
 
-  const availableBalance = await root.availableBalance()
-  const availableBalanceHuman = availableBalance.toHuman()
-
   // Get wasm file path from package.json test script in folder above
   const factory = await root.devDeploy(process.argv[2], {
     method: "init",
     args: {},
-    initialBalance: NEAR.parse("10_000_000 N"),
+    // initialBalance: NEAR.parse("10_000_000 N"),
+    initialBalance: NEAR.parse("10_000 N"),
   })
 
   const alice = await root.createSubAccount("alice", {
@@ -45,14 +43,16 @@ test.beforeEach(async (t) => {
 
   await alice.call(
     factory,
-    "create_plan",
+    "create_vault",
     {
       name: "Test Daily Plan",
       frequency: 1,
       amount: 1,
     },
     {
-      gas: "100" + "0".repeat(12), //100 Tgas
+      gas: "200" + "0".repeat(12), //100 Tgas
+      // attachedDeposit: "700" + "0".repeat(19), //0.007 NEAR
+      attachedDeposit: "7" + "0".repeat(24), //7 NEAR
     },
   )
 
@@ -68,39 +68,43 @@ test.afterEach.always(async (t) => {
   })
 })
 
-test("creates a new plan", async (t) => {
-  const { factory, bob } = t.context.accounts
+test("creates a new vault", async (t) => {
+  const { factory, bob, alice } = t.context.accounts
 
   await bob.call(
     factory,
-    "create_plan",
+    "create_vault",
     {
       name: "Test Monthly Plan",
       frequency: 3,
       amount: 3,
     },
     {
-      gas: "100" + "0".repeat(12), //100 Tgas
+      gas: "200" + "0".repeat(12), //100 Tgas
+      attachedDeposit: "7" + "0".repeat(24), //7 NEAR
     },
   )
 
-  const bobPlans = await factory.view("view_plans", {
+  const bobVaults = await factory.view("view_vaults_by_account_id", {
     accountId: bob.accountId,
   })
-  t.is(bobPlans[0].amount, 3)
+  t.is(bobVaults[0].amount, 3)
+
+  const totalVaults = await factory.view("view_vaults")
+  t.is(totalVaults[0].accountId, alice.accountId)
 })
 
-test("purchase nft - subscribe to a plan", async (t) => {
+test("purchase nft - subscribe to a vault", async (t) => {
   const { alice, factory, bob, jack } = t.context.accounts
 
-  const alicePlans = await factory.view("view_plans", {
+  const aliceVaults = await factory.view("view_vaults_by_account_id", {
     accountId: alice.accountId,
   })
 
-  const planId = factory.getAccount(alicePlans[0].id)
+  const vaultId = factory.getAccount(aliceVaults[0].id)
 
   await jack.call(
-    planId,
+    vaultId,
     "nft_mint",
     {
       name: TEST_NFT_NAME,
@@ -112,7 +116,7 @@ test("purchase nft - subscribe to a plan", async (t) => {
   )
 
   await jack.call(
-    planId,
+    vaultId,
     "nft_mint",
     {
       name: TEST_NFT_NAME,
@@ -123,7 +127,7 @@ test("purchase nft - subscribe to a plan", async (t) => {
     },
   )
 
-  const nftTokens = (await planId.view("nft_tokens_for_owner", {
+  const nftTokens = (await vaultId.view("nft_tokens_for_owner", {
     accountId: jack.accountId,
     fromIndex: 0,
     limit: 10,
@@ -132,12 +136,12 @@ test("purchase nft - subscribe to a plan", async (t) => {
   t.is(nftTokens.length, 2)
   t.is(nftTokens[0].ownerId, jack.accountId)
 
-  const token = await planId.view("nft_token", {
+  const token = await vaultId.view("nft_token", {
     tokenId: nftTokens[0].tokenId,
   })
 
   await bob.call(
-    planId,
+    vaultId,
     "nft_mint",
     {
       name: "Bob first nft purchase",
@@ -150,54 +154,3 @@ test("purchase nft - subscribe to a plan", async (t) => {
 
   // const tokens = await fa
 })
-
-// test("creates a new plan and get plans", async (t) => {
-//   const { root, contract } = t.context.accounts
-//   await root.call(contract, "createPlan", {
-//     name: "Test Daily Plan",
-//     frequency: 1,
-//     amount: 3,
-//   })
-//   const plans: Plan[] = await contract.view("getPlans", {
-//     accountId: root.accountId,
-//   })
-//   t.is(plans[0].amount, 1)
-//   t.is(plans[1].amount, 2)
-//   t.is(plans[2].amount, 3)
-// })
-//
-// test("subscribes to plan and get subscriptions", async (t) => {
-//   const { root, contract, alice } = t.context.accounts
-//
-//   const plans: Plan = await contract.view("getPlans", {
-//     accountId: root.accountId,
-//   })
-//   console.log(JSON.stringify(plans))
-//   // Get the current date
-//   const currentDate = new Date()
-//   currentDate.setMonth(currentDate.getMonth() + 2)
-//   console.log(`currentDate: ${currentDate.toISOString()}`)
-//   await alice.call(contract, "subscribeToPlan", {
-//     planId: plans[0].id,
-//     endDate: currentDate.getTime(),
-//   })
-//   const subscriptions: Subscription[] = await contract.view(
-//     "getSubscriptions",
-//     {
-//       accountId: alice.accountId,
-//     },
-//   )
-//   t.is(subscriptions[0].planId, plans[0].id)
-//
-//   await alice.call(contract, "subscribeToPlan", {
-//     planId: plans[1].id,
-//     endDate: currentDate.getTime(),
-//   })
-//
-//   await alice
-//     .call(contract, "subscribeToPlan", {
-//       planId: plans[1].id,
-//       endDate: currentDate.getTime(),
-//     })
-//     .catch(() => {})
-// })

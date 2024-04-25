@@ -1,8 +1,9 @@
 // @ts-nocheck
 import { assert, near } from "near-sdk-js"
-import { PlanContract } from "./index"
-import { internalAddTokenToOwner, refundDeposit } from "./internal"
+import { VaultContract } from "./index"
+import { internalAddTokenToOwner } from "./internal"
 import { Token, TokenMetadata } from "./metadata"
+import { refundDeposit } from "../helpers"
 
 export function internalMint({
   contract,
@@ -11,7 +12,7 @@ export function internalMint({
   receiverId,
   perpetualRoyalties,
 }: {
-  contract: PlanContract
+  contract: VaultContract
   tokenId: string
   metadata: TokenMetadata
   receiverId: string
