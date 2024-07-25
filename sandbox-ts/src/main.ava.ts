@@ -7,11 +7,16 @@ interface JsonToken {
   tokenId: string
 }
 
+type FrequencyMap = {
+  [key: number]: string
+}
+
 const TEST_NFT_NAME = "Jack nft purchase"
 
 const test = anyTest as TestFn<{
   worker: Worker
   accounts: Record<string, NearAccount>
+  frequencyMap: FrequencyMap
 }>
 
 test.beforeEach(async (t) => {
@@ -41,12 +46,16 @@ test.beforeEach(async (t) => {
     initialBalance: utils.format.parseNearAmount("100"),
   })
 
+  const frequencyMap = (await factory.view(
+    "view_frequency_map",
+  )) as FrequencyMap
+
   await alice.call(
     factory,
     "create_vault",
     {
       name: "Test Daily Plan",
-      frequency: 1,
+      frequency: getKeyByValue(frequencyMap, "Daily"),
       amount: 1,
     },
     {
@@ -58,6 +67,7 @@ test.beforeEach(async (t) => {
 
   // Save state for test runs, it is unique for each test
   t.context.worker = worker
+  t.context.frequencyMap = frequencyMap
   t.context.accounts = { root, factory, alice, bob, jack }
 })
 
@@ -70,13 +80,14 @@ test.afterEach.always(async (t) => {
 
 test("creates a new vault", async (t) => {
   const { factory, bob, alice } = t.context.accounts
+  const frequencyMap = t.context.frequencyMap
 
   await bob.call(
     factory,
     "create_vault",
     {
       name: "Test Monthly Plan",
-      frequency: 3,
+      frequency: getKeyByValue(frequencyMap, "Monthly"),
       amount: 3,
     },
     {
@@ -154,3 +165,12 @@ test("purchase nft - subscribe to a vault", async (t) => {
 
   // const tokens = await fa
 })
+
+function getKeyByValue(map: FrequencyMap, value: string): number | undefined {
+  for (const [key, val] of Object.entries(map)) {
+    if (val === value) {
+      return Number(key)
+    }
+  }
+  return undefined // Return undefined if the value is not found
+}

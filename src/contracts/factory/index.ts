@@ -1,15 +1,16 @@
 import {
   assert,
   call,
+  includeBytes,
   initialize,
+  LookupMap,
   near,
   NearBindgen,
-  validateAccountId,
   UnorderedMap,
+  validateAccountId,
   view,
-  includeBytes,
 } from "near-sdk-js"
-import { isValidFrequency } from "../../types/frequency"
+import { Frequency, isValidFrequency } from "../../types/frequency"
 import { generateUniqueSubAccountNearId } from "../../utils/generator"
 import { Prefix } from "../../types/prefix"
 import {
@@ -24,11 +25,24 @@ import { refundDeposit } from "../helpers"
 @NearBindgen({ requireInit: true })
 export class FactoryContract {
   initialized = false
-  vaults: UnorderedMap<string[]> = new UnorderedMap<string[]>("vaults")
+  frequencyMap: LookupMap<string>
+  vaults: UnorderedMap<string[]>
+
+  constructor() {
+    this.frequencyMap = new LookupMap<string>("frequencyMap")
+    this.vaults = new UnorderedMap<string[]>("vaults")
+  }
 
   @initialize({ privateFunction: true })
   init() {
     assert(!this.initialized, "Contract is already initialized.")
+
+    this.frequencyMap.set(Frequency.Hourly.toString(), "Hourly")
+    this.frequencyMap.set(Frequency.Daily.toString(), "Daily")
+    this.frequencyMap.set(Frequency.Weekly.toString(), "Weekly")
+    this.frequencyMap.set(Frequency.Monthly.toString(), "Monthly")
+    this.frequencyMap.set(Frequency.Yearly.toString(), "Yearly")
+
     this.initialized = true
   }
 
@@ -106,5 +120,15 @@ export class FactoryContract {
         ...JSON.parse(vault),
       })),
     )
+  }
+
+  @view({})
+  view_frequency_map(): { [key: string]: string } {
+    const result: { [key: string]: string } = {}
+    for (let i = 0; i <= Frequency.Yearly; i++) {
+      const key = i.toString()
+      result[key] = this.frequencyMap.get(key)
+    }
+    return result
   }
 }
